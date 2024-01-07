@@ -1,0 +1,94 @@
+alias userSP R1;
+alias sysCallNo R2;
+alias pTable R3;
+pTable = PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 5*CORE + 1]*16;
+[pTable + 13]= SP;
+SP = [pTable + 11] * 512  - 1 ;
+PTBR = [pTable + 14];
+userSP = [pTable + 13];
+sysCallNo = [[PTBR + 2*((userSP-5)/512)] * 512 + ((userSP-5)%512)] ;
+[pTable + 9] = sysCallNo;
+
+multipush(R1,R2,R3);
+R1 = ACQUIRE_KERN_LOCK;
+call ACCESS_CONTROL;
+multipop(R1,R2,R3);
+
+
+
+// Extract the semaphore descriptor from the user stack. 
+alias semId R4;
+semId  = [[PTBR + 2*((userSP-4)/512)] * 512 + ((userSP-4)%512)] ;
+alias ppTable R5;
+ppTable = (([pTable + 11] + 1) * 512 ) + -16+2*semId;  
+
+
+if(semId>7 || semId < 0 || [ppTable] != 1 ) then					//check if semid lies in valid range and if ppTable has entry for semid
+    [[PTBR + 2*((userSP-1)/512)] * 512 + ((userSP-1)%512)] = -1;
+    goto KERN_IRET;
+endif;
+
+
+alias sTableIndex R6;
+sTableIndex = [ppTable+1];
+alias sTable R7;
+sTable = SEMAPHORE_TABLE + sTableIndex * 4;
+
+
+
+if(sysCallNo == 19) then 										//  SemLock
+
+
+    while([sTable] != -1 && [sTable] != [SYSTEM_STATUS_TABLE + 5*CORE + 1]) do 					// the semaphore is already locked
+        [pTable + 4] = WAIT_SEMAPHORE;									//set current process to waiting
+        [pTable + 5] = sTableIndex;
+
+        multipush(R0,R1,R2,R3,R4,R5,R6,R7);								//call scheduler
+        R1 = RELEASE_LOCK;
+		R2 = KERN_LOCK;
+		call ACCESS_CONTROL;
+		
+        call SCHEDULER;
+    	
+    	R1 = ACQUIRE_KERN_LOCK;
+		call ACCESS_CONTROL;
+        multipop(R0,R1,R2,R3,R4,R5,R6,R7);
+    endwhile;
+
+    [sTable] = [SYSTEM_STATUS_TABLE + 5*CORE + 1];
+
+endif;
+
+if(sysCallNo == 20) then 										// SemUnLock
+
+    if([sTable] != -1) then 										// If semaphore is locked
+
+        if([sTable] != [SYSTEM_STATUS_TABLE + 5*CORE + 1]) then							//if current process did not lock the semaphore then store -2 
+            [[PTBR + 2*((userSP-1)/512)] * 512 + ((userSP-1)%512)] = -2;
+            goto KERN_IRET;
+        endif;
+        
+        [sTable] = -1;											//invalidate locking pid
+
+        alias i R8;
+        i = 0;
+        while(i <  16) do										//set all processes waiting for the semaphore as ready
+            if (([PROCESS_TABLE +16*i+ 4] == WAIT_SEMAPHORE && [PROCESS_TABLE +16*i+ 5] == sTableIndex )) then
+                [PROCESS_TABLE +16*i+ 4] = READY;
+            endif;
+            i=i+1;
+        endwhile;
+    endif;
+endif;
+
+[[PTBR + 2*((userSP-1)/512)] * 512 + ((userSP-1)%512)] = 0;
+
+KERN_IRET:
+multipush(R1, R2, R3);
+R1 = RELEASE_LOCK;
+R2 = KERN_LOCK;
+call ACCESS_CONTROL;
+multipop(R1, R2, R3);
+[pTable + 9] = 0;
+SP = [pTable + 13];
+ireturn;

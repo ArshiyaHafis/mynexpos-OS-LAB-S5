@@ -1,0 +1,93 @@
+alias userSP R1;
+alias sysCallNo R2;
+alias pTable R3;
+pTable = PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16;
+[pTable + 13]= SP;
+
+
+SP = [pTable + 11] * 512  - 1 ;
+PTBR = [pTable + 14] ;
+
+userSP = [pTable + 13];
+sysCallNo = [[PTBR + 2*((userSP-5)/512)] * 512 + ((userSP-5)%512)] ;
+[pTable + 9] = sysCallNo;
+
+alias returnAddress R4;
+returnAddress = [PTBR + 2*((userSP-1)/512)] * 512 + ((userSP-1)%512);
+
+if(sysCallNo == 17) then 		//semget
+
+    alias ppTable R5;
+    alias semId R6;
+    alias i R7;
+    i  = 0;
+    semId = -1;
+    while(i<8) do 			//find a free entry
+        ppTable = [pTable + 11]  * 512  + RESOURCE_TABLE_OFFSET+2*i;  
+        if([ppTable] == -1) then
+            semId = i;
+            break;
+        endif;
+        i = i + 1;
+    endwhile;
+
+    if (semId == -1 ) then		//no free entry
+        [returnAddress] = -1;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+        ireturn;
+    endif;
+
+    [ppTable] = SEMAPHORE;
+
+    multipush(R1,R2,R3,R4,R5,R6,R7);		//acquire semaphore
+    R1 = 6;
+    R2 = [SYSTEM_STATUS_TABLE+1];
+    call MOD_0;					//in resource manager module
+    multipop(R1,R2,R3,R4,R5,R6,R7);
+
+    if (R0 == -1 ) then
+
+        [returnAddress] = -2;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+        ireturn;
+    endif;
+
+    alias semIndex R0;
+    [ppTable+1] = semIndex;
+    [returnAddress] = semId;
+endif;
+
+
+
+
+
+if(sysCallNo == 18) then 						//sem release
+    alias semId R5;
+    semId = [[PTBR + 2*((userSP-4)/512)] * 512 + ((userSP-4)%512)] ;
+
+    alias ppTable R6;
+    ppTable = ([pTable + 11] * 512 ) + RESOURCE_TABLE_OFFSET +2*semId;  
+
+    if(semId>7 || semId < 0 || [ppTable] != SEMAPHORE ) then
+        [returnAddress] = -1;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+        ireturn;
+    endif;
+
+    multipush(R1,R2,R3,R4,R5,R6);				//release acquired semaphore
+    R1 = 7;
+    R2 = [ppTable+1]; // Semaphore Table Index
+    R3  = [SYSTEM_STATUS_TABLE+1]; // PID
+    call MOD_0;
+    multipop(R1,R2,R3,R4,R5,R6);
+    [ppTable] = -1;
+
+    [returnAddress] = 0;
+endif;
+
+[pTable + 9] = 0;
+SP = [pTable + 13];
+ireturn;

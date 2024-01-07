@@ -1,0 +1,53 @@
+load --os=primary ../nespl/spl_progs/me/OStartup.xsm
+load --os=secondary ../nespl/spl_progs/me/OStartupSec.xsm
+load --shell ../expl/expl_progs/ex_shell.xsm
+load --init ../expl/expl_progs/login.xsm
+load --int=4 ../nespl/spl_progs/me/int4.xsm
+load --int=5 ../nespl/spl_progs/me/int5.xsm
+load --int=6 ../nespl/spl_progs/me/int6.xsm
+load --int=7 ../nespl/spl_progs/me/int7.xsm
+load --int=8 ../nespl/spl_progs/me/int8.xsm
+load --int=9 ../nespl/spl_progs/me/int9.xsm
+load --int=10 ../nespl/spl_progs/me/int10.xsm
+load --int=11 ../nespl/spl_progs/me/int11.xsm
+load --int=12 ../nespl/spl_progs/me/int12.xsm
+load --int=13 ../nespl/spl_progs/me/int13.xsm
+load --int=14 ../nespl/spl_progs/me/int14.xsm
+load --int=15 ../nespl/spl_progs/me/int15.xsm
+load --int=16 ../nespl/spl_progs/me/int16.xsm
+load --int=17 ../nespl/spl_progs/me/int17.xsm
+load --int=console ../nespl/spl_progs/me/console_int.xsm
+load --int=timer ../nespl/spl_progs/me/timer.xsm
+load --int=disk ../nespl/spl_progs/me/disk_int.xsm
+load --exhandler ../nespl/spl_progs/me/exception_handler.xsm
+load --library ../expl/library.lib
+load --idle ../expl/samples/idle_12.xsm
+load --module 0 ../nespl/spl_progs/me/MOD_0.xsm
+load --module 1 ../nespl/spl_progs/me/MOD_1.xsm
+load --module 2 ../nespl/spl_progs/me/MOD_2.xsm
+load --module 3 ../nespl/spl_progs/me/MOD_3.xsm
+load --module 4 ../nespl/spl_progs/me/MOD_4.xsm
+load --module 5 ../nespl/spl_progs/me/MOD_5.xsm
+load --module 6 ../nespl/spl_progs/me/MOD_6.xsm
+load --module 7 ../nespl/spl_progs/me/MOD_7.xsm
+load --module 8 ../nespl/spl_progs/me/MOD_8_PetersonTest.xsm
+load --exec ../expl/expl_progs/4files.xsm
+load --exec ../expl/expl_progs/4fork.xsm
+load --exec ../expl/expl_progs/forknum.xsm
+load --exec ../expl/expl_progs/fork27_4.xsm
+load --exec ../expl/expl_progs/pgm1.xsm
+load --exec ../expl/expl_progs/pgm2.xsm
+load --exec ../expl/expl_progs/delay.xsm
+load --exec ../expl/expl_progs/merge.xsm
+load --exec ../expl/expl_progs/m_merge.xsm
+load --exec ../expl/expl_progs/m_sort.xsm
+load --exec ../expl/expl_progs/m_store.xsm
+load --exec ../expl/expl_progs/shell_commands/cat.xsm
+load --exec ../expl/expl_progs/shell_commands/cp.xsm
+load --exec ../expl/expl_progs/shell_commands/ls.xsm
+load --exec ../expl/expl_progs/shell_commands/rm.xsm
+load --exec ../expl/expl_progs/shell_commands/lu.xsm
+load --exec ../expl/expl_progs/shell_commands/ru.xsm
+load --exec ../expl/expl_progs/merge_s.xsm
+load --exec ../expl/expl_progs/merge_c.xsm
+load --data $HOME/myexpos/sample.dat

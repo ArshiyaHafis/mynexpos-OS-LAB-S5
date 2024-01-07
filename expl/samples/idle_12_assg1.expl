@@ -1,0 +1,17 @@
+int main()
+{
+	decl
+		int i, temp;
+		string b;
+	enddecl
+	
+	begin
+		i=101;
+		while(i<=200) do
+			//b="p";
+			temp = exposcall("Write", -2, i);
+			i=i+1;
+		endwhile;
+		return 0;
+	end
+}

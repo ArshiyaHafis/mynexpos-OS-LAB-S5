@@ -1,0 +1,53 @@
+alias currentPID R0;
+currentPID = [SYSTEM_STATUS_TABLE+1];	// Obtain the PID of currently executing process from System Status Table.
+
+multipush(BP);		//push bp
+
+alias process_table_entry R1;
+process_table_entry = PROCESS_TABLE + currentPID * 16;
+
+[process_table_entry + 12] = SP % 512;
+[process_table_entry + 14] = PTBR;
+[process_table_entry + 15] = PTLR;
+
+alias i R4;
+alias new_process_table R3;
+alias newPID R2;
+newPID =0;				//idle process
+i =  [SYSTEM_STATUS_TABLE+1]+1; 	//current id +1
+
+//print "scheduler";
+while(i<16) do
+    process_table_entry = PROCESS_TABLE + i * 16;
+    if(([process_table_entry + 4] == READY) || ([process_table_entry + 4] == CREATED) ) then
+        newPID = i;
+        break;
+    endif;
+    i=i+1;
+endwhile;
+
+
+new_process_table = PROCESS_TABLE + newPID * 16;
+
+//print newPID;
+
+SP =  [new_process_table + 11] * 512 + [new_process_table + 12] ;		//sp = Uareapgno*512 + kptr
+PTBR = [new_process_table + 14];						//new process PTBR
+PTLR = [new_process_table + 15];						//new process PTLR
+
+//update new pid in system status table
+[SYSTEM_STATUS_TABLE + 1] = newPID;						//currentPID updated
+
+
+if([new_process_table + 4] == CREATED) then
+    SP = [new_process_table +13];			//SP=UPTR
+    [new_process_table + 4] = RUNNING;			//change state to running
+    [new_process_table + 9] = 0; 			// MODE =0
+    ireturn;
+endif;
+
+
+[new_process_table + 4] = RUNNING;			//new process = running
+multipop(BP);						//bp of new process
+//print "return";
+return;

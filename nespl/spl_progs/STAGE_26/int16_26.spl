@@ -1,0 +1,226 @@
+alias userSP R1;
+alias sysCallNo R5;
+alias pTable R3;
+alias returnAddress R4;
+
+pTable = PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16;
+[pTable + 13]= SP;
+SP = [pTable + 11] * 512  - 1 ;
+PTBR = [pTable + 14] ;
+userSP = [pTable + 13];
+sysCallNo = [[PTBR + 2*((userSP-5)/512)] * 512 + ((userSP-5)%512)] ;
+[pTable + 9] = sysCallNo;
+
+alias uName R2;
+uName = [[PTBR + 2*((userSP-4)/512)] * 512 + ((userSP-4)%512)] ;
+returnAddress = [PTBR + 2*((userSP-1)/512)] * 512 + ((userSP-1)%512) ;
+
+
+
+if(sysCallNo == 22) then						// newusr
+    alias pwd R6;
+    pwd  = [[PTBR + 2*((userSP-3)/512)] * 512 + ((userSP-3)%512)] ;
+    
+    if([SYSTEM_STATUS_TABLE] !=  1 || [SYSTEM_STATUS_TABLE+1] != 2)then
+        [returnAddress] = -2;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+        ireturn;
+    endif;
+
+
+    alias uTable R7;
+    alias i R8;
+    uTable = -1;
+    i = 0;
+    while(i < MAX_USER_NUM) do
+        if([USER_TABLE + i*2] == uName) then		//check if user already exists
+            [returnAddress] = -1;
+            [pTable + 9] = 0;
+            SP = [pTable + 13];
+            ireturn;
+        endif;
+        i=i+1;
+    endwhile;
+	
+	i=0;
+	while(i < MAX_USER_NUM) do				//check if free entry available in usertable 
+        if([USER_TABLE + i*2] == -1) then
+            uTable = USER_TABLE+i*2;
+            break;
+        endif;
+        i=i+1;
+    endwhile;
+
+
+    if(uTable == -1)then
+        [returnAddress] = -3;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+        ireturn;
+    endif;
+
+
+    encrypt pwd;
+    alias encryptedpwd R6;
+    [uTable] = uName;
+    [uTable+1] = encryptedpwd;
+    [returnAddress] = 0;
+
+endif;
+
+if(sysCallNo == 23)then 										//remusr
+    if([SYSTEM_STATUS_TABLE] != 1 || [SYSTEM_STATUS_TABLE+1] != 2) then		//current user is not root or current process not shell
+        [returnAddress] = -2;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+        ireturn;
+    endif;
+
+    if(uName == "root" || uName == "kernel") then			//if user to be removed is root or kernel
+        [returnAddress] = -2;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+        ireturn;
+    endif;
+
+    alias uTable R6;
+    alias i R7;
+    
+    uTable = -1;
+    i = 0;
+    while(i < MAX_USER_NUM) do							//find corresponding uTable entry
+        if([USER_TABLE+i*2] == uName) then
+            uTable = USER_TABLE + i*2;
+            break;
+        endif;
+        i = i+1;
+    endwhile;
+
+    if(uTable == -1) then								//no uname entry
+        [returnAddress] = -1;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+        ireturn;
+    endif;
+
+
+    i = 0;
+    while(i < MAX_FILE_NUM) do 							// if there are files under uName
+        if([ROOT_FILE+i*8+3] == uName) then
+            [returnAddress] = -3;
+            [pTable + 9] = 0;
+            SP = [pTable + 13];
+            ireturn;
+        endif;
+
+        i = i+1;
+    endwhile;
+	
+	//invalid uTable entries
+    [uTable] = -1;
+    [uTable+1] = -1;
+    [returnAddress] = 0;
+
+endif;
+
+if(sysCallNo == 24) then									//setpwd
+    alias pwd R6;
+    pwd  = [[PTBR + 2*((userSP-3)/512)] * 512 + ((userSP-3)%512)] ;
+    if( [SYSTEM_STATUS_TABLE+1] != 2)then						//current process is not shell
+        [returnAddress] = -1;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+        ireturn;
+    endif;
+
+    alias i R7;
+    i = 0;													//find uTable entry corresponding to uName
+    while(i < MAX_USER_NUM) do
+        if([USER_TABLE + i *2] == uName) then
+            break;
+        endif;
+        i = i +1;
+    endwhile;
+    
+    if( i == MAX_USER_NUM)then					//no uName entry
+        [returnAddress] = -2;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+        ireturn;
+    endif;
+
+    if([SYSTEM_STATUS_TABLE] != i) then					//userid of process != userid of user
+        if([SYSTEM_STATUS_TABLE] != 1) then				//current user is not root
+            [returnAddress] = -1;
+            [pTable + 9] = 0;
+            SP = [pTable + 13];
+            ireturn;
+        endif;
+
+    endif;
+
+    encrypt pwd;
+    alias encryptedpwd R6;
+    [USER_TABLE + i*2 + 1] = encryptedpwd;
+    [returnAddress] = 0;
+
+
+endif;
+
+
+
+if(sysCallNo == 25) then						// getuname
+    alias userId R2;
+    
+    if(userId < 0 || userId >15) then			//uid doesnt lie in range
+        [returnAddress] = -1;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+        ireturn;
+    endif;
+
+
+    alias uTable R6;						//uTable is invalid
+    uTable = USER_TABLE + userId*2;
+    if([uTable] == -1) then
+        [returnAddress] = -1;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+        ireturn;
+    endif;
+
+    [returnAddress] = [uTable];							//return username
+
+endif;
+
+if(sysCallNo == 26) then 							// Getuid
+    alias i R6;
+    i = 0;
+
+    while(i<MAX_USER_NUM) do
+        if([USER_TABLE+i*2] == uName ) then
+        	[returnAddress] = i;
+        	break;
+        endif;
+        i= i+1;
+    endwhile;
+    
+    if(i == MAX_USER_NUM) then
+	[returnAddress] = -1;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+	ireturn;
+	endif;
+
+    
+    
+endif;
+
+
+
+
+// At any point of return to user, remember to reset the MODE FLAG and change the stack to user stack.
+[pTable + 9] = 0;
+SP = [pTable + 13];
+ireturn;

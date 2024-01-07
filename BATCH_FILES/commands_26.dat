@@ -1,0 +1,61 @@
+load --os $HOME/myexpos/spl/spl_progs/STAGE_26/os_startup_26.xsm
+load --shell ../expl/expl_progs/ex_shell.xsm
+load --init ../expl/expl_progs/login.xsm
+load --int=4 ../spl/spl_progs/STAGE_23/int4_23.xsm
+load --int=5 ../spl/spl_progs/STAGE_25/int5_25.xsm
+load --int=6 ../spl/spl_progs/STAGE_24/int6_24.xsm
+load --int=7 ../spl/spl_progs/STAGE_25/int7_25.xsm
+load --int=8 ../spl/spl_progs/STAGE_24/int8_24.xsm
+load --int=9 ../spl/spl_progs/STAGE_19/int9_19.xsm
+load --int=10 ../spl/spl_progs/STAGE_20/int10_20.xsm
+load --int=11 ../spl/spl_progs/STAGE_21/int11_21.xsm
+load --int=12 ../spl/spl_progs/STAGE_26/int12_26.xsm
+load --int=13 ../spl/spl_progs/STAGE_22/int13_22.xsm
+load --int=14 ../spl/spl_progs/STAGE_22/int14_22.xsm
+load --int=15 ../spl/spl_progs/STAGE_26/int15_26.xsm
+load --int=16 ../spl/spl_progs/STAGE_26/int16_26.xsm
+load --int=17 ../spl/spl_progs/STAGE_26/int17_26.xsm
+load --int=console ../spl/spl_progs/STAGE_16/console_int_handler_16.xsm
+load --int=timer $HOME/myexpos/spl/spl_progs/STAGE_14/timer_int_14.xsm
+load --int=disk ../spl/spl_progs/STAGE_18/disk_int_handler_18.xsm
+load --exhandler ../spl/spl_progs/STAGE_19/exception_handler_19.xsm
+load --library ../expl/library.lib
+load --idle ../expl/samples/idle_12.xsm
+load --module 0 ../spl/spl_progs/STAGE_24/mod0_resmanage_24.xsm
+load --module 1 ../spl/spl_progs/STAGE_25/mod1_prmanage_25.xsm
+load --module 2 ../spl/spl_progs/STAGE_25/mod2_memmanage_25.xsm
+load --module 3 ../spl/spl_progs/STAGE_25/mod3_filemanage_25.xsm
+load --module 4 ../spl/spl_progs/STAGE_23/mod4_devmanage_23.xsm
+load --module 5 ../spl/spl_progs/STAGE_20/mod5_scheduler_20.xsm
+load --module 7 ../spl/spl_progs/STAGE_26/boot_mod_26.xsm
+load --exec ../expl/expl_progs/100odd.xsm
+load --exec ../expl/expl_progs/l_list.xsm
+load --exec ../expl/samples/primes.xsm
+load --exec ../expl/samples/100even.xsm
+load --exec ../expl/expl_progs/arith.xsm
+load --exec ../expl/expl_progs/check.xsm
+load --exec ../expl/expl_progs/pid.xsm
+load --exec ../expl/expl_progs/forkback.xsm
+load --exec ../expl/expl_progs/rw.xsm
+load --exec ../expl/expl_progs/parent.xsm
+load --exec ../expl/expl_progs/child.xsm
+load --exec ../expl/expl_progs/merge_s.xsm
+load --exec ../expl/expl_progs/merge_c.xsm
+load --exec ../expl/expl_progs/create_f.xsm
+load --exec ../expl/expl_progs/readfile.xsm
+load --exec ../expl/expl_progs/del_f.xsm
+load --exec ../expl/expl_progs/lseek_f.xsm
+load --exec ../expl/expl_progs/1_1100.xsm
+load --exec ../expl/expl_progs/append.xsm
+load --exec ../expl/expl_progs/1to100.xsm
+load --exec ../expl/expl_progs/4files.xsm
+load --exec ../expl/expl_progs/check/hehe.xsm
+load --exec ../expl/expl_progs/shell_commands/cat.xsm
+load --exec ../expl/expl_progs/shell_commands/cp.xsm
+load --exec ../expl/expl_progs/shell_commands/ls.xsm
+load --exec ../expl/expl_progs/shell_commands/rm.xsm
+load --exec ../expl/expl_progs/shell_commands/lu.xsm
+load --exec ../expl/expl_progs/shell_commands/ru.xsm
+load --exec ../expl/expl_progs/login.xsm
+load --data $HOME/myexpos/sample.dat
+load --data ../expl/numbers.dat

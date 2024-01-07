@@ -1,0 +1,51 @@
+alias functionNum R1;
+alias pageNo R2;
+
+if(functionNum == 1) then									//get free page
+	[SYSTEM_STATUS_TABLE + 3] = [SYSTEM_STATUS_TABLE + 3] + 1;				//increasing wait mem count bcs current process is waiting for memory
+	while ([SYSTEM_STATUS_TABLE + 2] == 0) do
+		[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] + 4] = WAIT_MEM;			//if mem not available, then convert to wait for mem status
+		multipush(R1, R2);
+		call MOD_5;									//call scheduler
+		multipop(R1, R2);
+	endwhile;
+	
+	[SYSTEM_STATUS_TABLE+2] = [SYSTEM_STATUS_TABLE+2]  - 1;					//no of free mem pages decreased
+	[SYSTEM_STATUS_TABLE+3] = [SYSTEM_STATUS_TABLE+3]  - 1;					//wait mem count also decreased
+	
+	
+	alias i R3;
+	i=0;
+	
+	while(i < 128) do									//find for free page
+		if([MEMORY_FREE_LIST + i] == 0) then
+			[MEMORY_FREE_LIST + i] = 1;						//increase no of processes in given mem page
+			break;
+		endif;
+		i = i + 1;
+	endwhile;
+	R0 = i;
+	print R0;
+	return;
+endif;
+
+if( functionNum == 2) then									//release page
+	[MEMORY_FREE_LIST + pageNo] = [MEMORY_FREE_LIST + pageNo] - 1;				//reduce no of processes on current mem page
+	if ([MEMORY_FREE_LIST + pageNo] == 0) then						// if no of processes on current mem page = 0 then increase free pages by 1
+		[SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] + 1;
+	endif;
+	
+	alias i R3;
+	i=0;
+	while(i < 16) do
+		if([PROCESS_TABLE + i*16 + 4] == WAIT_MEM) then					//convert all current waiting processes for page to ready
+			[PROCESS_TABLE + i*16 + 4] = READY;
+		endif;
+		i = i + 1;
+	endwhile;
+	return;
+endif;
+	
+	
+	
+	

@@ -1,0 +1,229 @@
+alias functionNum R1;
+alias currentPID R2;
+
+
+//swap out
+if(functionNum == 1) then
+	alias i R3;
+	alias pid R4; //pid of entry to be swapped out
+	alias pTable R5;
+	pid = -1;
+	
+	//WAIT_PROCESS
+	i = 3;
+	while(i < 15) do
+		pTable = PROCESS_TABLE + i*16;
+		if([pTable + 6] == 0 && [pTable + 4] == WAIT_PROCESS) then
+			pid = i;
+			break;
+		endif;
+		i = i + 1;
+	endwhile;
+	
+	//WAIT_SEMAPHORE
+	if(i == 15) then
+		i = 3;
+		while(i < 15) do
+			pTable = PROCESS_TABLE + i*16;
+			if([pTable + 6] == 0 && [pTable + 4] == WAIT_SEMAPHORE) then
+				pid = i;
+				break;
+			endif;
+			i = i + 1;
+		endwhile;
+	endif;
+	
+	//if not wait then check process with max tick
+	if(i == 15) then
+		i = 3;
+		while(i < 15) do
+			pTable = PROCESS_TABLE + i*16;
+			if([pTable + 6] == 0 && [pTable + 4] != RUNNING && [pTable + 4] != ALLOCATED && [pTable + 4] != TERMINATED) then
+			
+				if(pid == -1) then
+					pid = i;
+				else
+					if([pTable] > [PROCESS_TABLE + pid*16]) then
+						pid = i;
+					endif;
+				endif;
+				
+			endif;
+			i = i + 1;
+		endwhile;
+	endif;
+	
+
+	
+	//no process
+	if(pid == -1) then
+		[SYSTEM_STATUS_TABLE + 5] = 0;
+		return;
+	endif;
+	
+	
+	//tick = 0
+	[PROCESS_TABLE + pid*16] = 0;
+	
+	
+	//page table entry
+	alias ptbr R6;
+	ptbr = [PROCESS_TABLE + pid*16 + 14];
+	
+
+	
+	i = 2;
+	while(i < 10) do
+		if([ptbr + 2*i] != -1) then
+			//stack or unshared heap pages
+			if(((i >= 2 && i <= 3) && [MEMORY_FREE_LIST + [ptbr + 2*i]] == 1) || (i >= 8 && i <= 9)) then
+				multipush(R1,R2,R3,R4,R5,R6);
+				R1 = 6;
+				call MOD_2;
+				multipop(R1,R2,R3,R4,R5,R6);
+				
+				[DISK_MAP_TABLE + pid*10 + i] = R0;
+				
+				
+				//disk store
+				multipush(R1,R2,R3,R4,R5,R6);
+				R1 = 1;
+				R2 = currentPID;
+				R3 = [ptbr + 2*i];
+				R4 = R0;
+				call MOD_4;
+				multipop(R1,R2,R3,R4,R5,R6);
+				
+				
+			endif;
+			
+			//releasing code and stack pages only 
+			if((i != 2 && i != 3) || ((i >= 2 && i <= 3) && [MEMORY_FREE_LIST + [ptbr + 2*i]] == 1)) then
+			
+				//release page
+				multipush(R1,R2,R3,R4,R5,R6);
+				R1 = 2;
+				R2 = [ptbr + 2*i];
+				call MOD_2;
+				multipop(R1,R2,R3,R4,R5,R6);
+			
+				[ptbr + 2*i] = -1;
+				[ptbr + 2*i + 1] = "0000";
+			endif;
+			
+		endif;
+		i = i + 1;
+	endwhile;
+	
+	
+
+	
+	
+	
+	
+	[PROCESS_TABLE + pid*16 + 6] = 1;									//swap flag
+	[SYSTEM_STATUS_TABLE + 4] = [SYSTEM_STATUS_TABLE + 4] + 1;			//swapped count increment
+	[SYSTEM_STATUS_TABLE + 5] = 0;										//paging status
+	
+	//print "end";
+	
+	
+	return;
+endif;
+
+
+//swap in
+if(functionNum == 2) then
+
+
+	
+	alias i R3;
+	alias pid R4;
+	pid = -1;
+	
+	
+	i = 3;
+	while(i < 15) do
+		if([PROCESS_TABLE + i*16 + 6] == 1 && [PROCESS_TABLE + i*16 + 4] == READY) then
+			if(pid == -1) then
+				pid = i;
+			else
+				if([PROCESS_TABLE + i*16] > [PROCESS_TABLE + pid*16]) then
+					pid = i;
+				endif;
+			endif;
+		endif;
+		i = i + 1;
+	endwhile;
+	
+	//no process to swap in
+	if(pid == -1) then
+		[SYSTEM_STATUS_TABLE + 5] = 0;
+		return;
+	endif;
+	
+	//print "SWAP IN";
+	//print pid;
+	
+	[PROCESS_TABLE + pid*16] = 0;
+	
+	alias ptbr R5;
+	ptbr = [PROCESS_TABLE + pid*16 + 14];
+	
+	i = 2;
+	while(i < 10) do
+		//print "pagetable";
+		if([DISK_MAP_TABLE + pid*10 + i] != -1) then
+			//for heap and stack page
+			if((i >= 2 && i <= 3) || (i >= 8 && i <= 9)) then
+				
+				
+				alias pageNum R6;
+			
+				//get free page
+				multipush(R1,R2,R3,R4,R5,R6);
+				R1 = 1;
+				call MOD_2;
+				multipop(R1,R2,R3,R4,R5,R6);
+				
+				pageNum = R0;
+			
+			
+				//disk load
+				multipush(R1,R2,R3,R4,R5,R6);
+				R1 = 2;
+				R2 = currentPID;
+				R4 = [DISK_MAP_TABLE + pid*10 + i];
+				R3 = pageNum;
+				call MOD_4;
+				multipop(R1,R2,R3,R4,R5,R6);
+				
+				
+				//release block
+				multipush(R1,R2,R3,R4,R5,R6);
+				R1 = 4;
+				R2 = [DISK_MAP_TABLE + pid*10 + i];
+				call MOD_2;
+				multipop(R1,R2,R3,R4,R5,R6);
+				
+				[ptbr + 2*i] = pageNum;
+				[ptbr + 2*i + 1] = "0110";
+				
+				[DISK_MAP_TABLE + pid*10 + i] = -1;
+		
+			endif;
+		endif;
+		
+		i = i + 1;
+		
+	endwhile;
+	
+	[PROCESS_TABLE + pid*16 + 6] = 0;								//swap flag
+	[SYSTEM_STATUS_TABLE + 4] = [SYSTEM_STATUS_TABLE + 4] - 1;		//swapped count
+	[SYSTEM_STATUS_TABLE + 5] = 0;									//paging status
+	
+	//breakpoint;
+	//print "end";
+	
+	return;
+endif;

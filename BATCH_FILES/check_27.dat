@@ -1,0 +1,61 @@
+load --os=primary ../nespl/spl_progs/me/os_27.xsm
+load --shell ../expl/expl_progs/ex_shell.xsm
+load --init ../expl/expl_progs/login.xsm
+load --int=4 ../nespl/spl_progs/me/int4_23.xsm
+load --int=5 ../nespl/spl_progs/me/int5_25.xsm
+load --int=6 ../nespl/spl_progs/me/int6_24.xsm
+load --int=7 ../nespl/spl_progs/me/int7_25.xsm
+load --int=8 ../nespl/spl_progs/me/int8_24.xsm
+load --int=9 ../nespl/spl_progs/me/int9_19.xsm
+load --int=10 ../nespl/spl_progs/me/int10_20.xsm
+load --int=11 ../nespl/spl_progs/me/int11_21.xsm
+load --int=12 ../nespl/spl_progs/me/int12_26.xsm
+load --int=13 ../nespl/spl_progs/me/int13_22.xsm
+load --int=14 ../nespl/spl_progs/me/int14_22.xsm
+load --int=15 ../nespl/spl_progs/me/int15_26.xsm
+load --int=16 ../nespl/spl_progs/me/int16_26.xsm
+load --int=17 ../nespl/spl_progs/me/int17_26.xsm
+load --int=console ../nespl/spl_progs/STAGE_16/console_int_handler_16.xsm
+load --int=timer ../nespl/spl_progs/me/timer_27.xsm
+load --int=disk ../nespl/spl_progs/STAGE_18/disk_int_handler_18.xsm
+load --exhandler ../nespl/spl_progs/me/ex_19.xsm
+load --library ../expl/library.lib
+load --idle ../expl/samples/idle_12.xsm
+load --module 0 ../nespl/spl_progs/me/mod0_24.xsm
+load --module 1 ../nespl/spl_progs/me/mod1_27.xsm 
+load --module 2 ../nespl/spl_progs/me/mod2_27.xsm
+load --module 3 ../nespl/spl_progs/me/mod3_25.xsm
+load --module 4 ../nespl/spl_progs/me/mod4_23.xsm
+load --module 5 ../nespl/spl_progs/me/mod5_27.xsm
+load --module 6 ../nespl/spl_progs/me/mod6_27.xsm
+load --module 7 ../nespl/spl_progs/me/boot_27.xsm
+load --exec ../expl/expl_progs/pid.xsm
+load --exec ../expl/expl_progs/forkback.xsm
+load --exec ../expl/expl_progs/rw.xsm
+load --exec ../expl/expl_progs/parent.xsm
+load --exec ../expl/expl_progs/child.xsm
+load --exec ../expl/expl_progs/create_f.xsm
+load --exec ../expl/expl_progs/readfile.xsm
+load --exec ../expl/expl_progs/del_f.xsm
+load --exec ../expl/expl_progs/lseek_f.xsm
+load --exec ../expl/expl_progs/1_1100.xsm
+load --exec ../expl/expl_progs/append.xsm
+load --exec ../expl/expl_progs/1to100.xsm
+load --exec ../expl/expl_progs/4files.xsm
+load --exec ../expl/expl_progs/4fork.xsm
+load --exec ../expl/expl_progs/forknum.xsm
+load --exec ../expl/expl_progs/fork27_4.xsm
+load --exec ../expl/expl_progs/pgm1.xsm
+load --exec ../expl/expl_progs/pgm2.xsm
+load --exec ../expl/expl_progs/delay.xsm
+load --exec ../expl/expl_progs/merge.xsm
+load --exec ../expl/expl_progs/m_merge.xsm
+load --exec ../expl/expl_progs/m_sort.xsm
+load --exec ../expl/expl_progs/m_store.xsm
+load --exec ../expl/expl_progs/shell_commands/cat.xsm
+load --exec ../expl/expl_progs/shell_commands/cp.xsm
+load --exec ../expl/expl_progs/shell_commands/ls.xsm
+load --exec ../expl/expl_progs/shell_commands/rm.xsm
+load --exec ../expl/expl_progs/shell_commands/lu.xsm
+load --exec ../expl/expl_progs/shell_commands/ru.xsm
+load --data $HOME/myexpos/sample.dat

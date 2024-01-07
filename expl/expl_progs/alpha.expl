@@ -1,0 +1,24 @@
+int main(){
+	decl 
+		string a;
+		int temp;
+	enddecl
+	
+	begin
+	a="a";
+	temp = exposcall("Write", -2, a);
+	a="b";
+	temp = exposcall("Write", -2, a);
+	a="c";
+	temp = exposcall("Write", -2, a);
+	a="d";
+	temp = exposcall("Write", -2, a);
+	a="e";
+	temp = exposcall("Write", -2, a);
+	a="f";
+	temp = exposcall("Write", -2, a);
+	a="g";
+	temp = exposcall("Write", -2, a);
+	return 0;
+	end
+}

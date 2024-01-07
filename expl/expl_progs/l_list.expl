@@ -1,0 +1,52 @@
+type
+	llist
+	{
+		int key;
+    		llist next;
+  	}
+endtype
+
+decl
+    	llist head;
+enddecl
+
+int main()
+{
+  	decl
+    		int n, temp;
+    		llist t1, t2;
+  	enddecl
+
+  	begin
+    		temp = initialize();
+    
+    		head=null;
+    		read(n); 
+
+    		t2=head;
+    		while (n!=0)  do
+      			read(temp);
+      			t1=alloc();
+      			t1.key=temp;
+      			t1.next=null;
+
+      			if (head==null) then
+      				head=t1;
+      				t2=t1;
+      			else
+      				t2.next=t1;
+      				t2=t2.next;
+      			endif;
+      
+      			n=n-1;
+    		endwhile;
+
+    		t1=head;
+   		while(t1!=null)  do
+      			write(t1.key);
+      			t1=t1.next;
+    		endwhile;
+
+    		return 1;
+  	end
+}

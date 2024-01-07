@@ -1,0 +1,55 @@
+alias userSP R1;
+alias pTable R3;
+pTable = PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16;
+[pTable + 13]= SP;
+SP = [pTable + 11] * 512  - 1 ;
+PTBR = [pTable + 14] ;
+userSP = [pTable + 13];
+[pTable + 9] = 15;
+
+if ([pTable + 1] != 1 || [pTable + 3] != 1) then			//current process is not shell or current user is not root
+    [[PTBR + 2*((userSP-1)/512)] * 512 + ((userSP-1)%512)] = -1;
+    [pTable + 9] = 0;
+    SP = [pTable + 13];
+    ireturn;
+endif;
+
+
+//store all modified changes
+//inode table
+multipush(R1,R2);
+R1 = DISK_STORE;
+R2 = [SYSTEM_STATUS_TABLE + 1];
+R3 = 59;
+R4 = 3;
+call DEVICE_MANAGER;
+multipop(R1,R2);
+
+multipush(R1,R2);
+R1 = DISK_STORE;
+R2 = [SYSTEM_STATUS_TABLE + 1];
+R3 = 60;
+R4 = 4;
+call DEVICE_MANAGER;
+multipop(R1,R2);
+
+//root file
+multipush(R1,R2);
+R1 = DISK_STORE;
+R2 = [SYSTEM_STATUS_TABLE + 1];
+R3 = 62;
+R4 = 5;
+call DEVICE_MANAGER;
+multipop(R1,R2);
+
+//disk free list
+multipush(R1,R2);
+R1 = DISK_STORE;
+R2 = [SYSTEM_STATUS_TABLE + 1];
+R3 = 61;
+R4 = 2;
+call DEVICE_MANAGER;
+multipop(R1,R2);
+
+
+halt;

@@ -1,0 +1,222 @@
+//RESOURCE_MANAGER MODULE
+
+alias functionNum R1;
+
+//ACQUIRE BUFFER
+if ( functionNum == 1 )then
+    alias bfNo R2;
+    alias currentPID R3;
+    while ([BUFFER_TABLE + 4*bfNo + 2] != -1 )do
+        [PROCESS_TABLE + ( currentPID * 16) + 4] = WAIT_BUFFER;
+        [PROCESS_TABLE + ( currentPID * 16) + 5] = bfNo;
+        multipush(R1,R2,R3);
+        R1 = RELEASE_LOCK;
+		R2 = KERN_LOCK;
+		call ACCESS_CONTROL;
+		
+        call SCHEDULER;
+        
+        R1 = ACQUIRE_KERN_LOCK;
+		call ACCESS_CONTROL;
+        multipop(R1,R2,R3);
+    endwhile;
+    [BUFFER_TABLE + 4*bfNo + 2] = currentPID;
+    return;
+endif;
+
+//RELEASE BUFFER
+if ( functionNum == 2 )then
+    alias bfNo R2;
+    alias currentPID R3;
+    alias i R4;
+
+
+    if ([BUFFER_TABLE + 4*bfNo + 2]!=currentPID)then
+        R0 = -1;
+    else
+        [BUFFER_TABLE + 4*bfNo + 2] = -1;
+        i=0;
+        while( i != 16 )do
+            if ( [PROCESS_TABLE + ( i * 16) + 4] == WAIT_BUFFER &&  [PROCESS_TABLE + ( i * 16) + 5] == bfNo)then
+                [PROCESS_TABLE + ( i * 16) + 4] = READY;
+            endif;
+            i = i + 1;
+        endwhile;
+        R0 = 0;
+    endif;
+endif;
+
+//ACQUIRE DISK
+if ( functionNum == 3 )then
+    alias currentPID R2;
+
+
+    while( [DISK_STATUS_TABLE + 0] == 1 )do
+        [PROCESS_TABLE + ( currentPID * 16) + 4] = WAIT_DISK;
+        multipush(R1,R2,R3);
+        R1 = RELEASE_LOCK;
+		R2 = KERN_LOCK;
+		call ACCESS_CONTROL;
+		
+        call SCHEDULER;
+        
+        R1 = ACQUIRE_KERN_LOCK;
+		call ACCESS_CONTROL;
+        multipop(R1,R2,R3);
+    endwhile;
+
+    
+    [DISK_STATUS_TABLE + 0] = 1;
+    [DISK_STATUS_TABLE + 4] = currentPID;
+
+endif;
+
+
+//ACQUIRE INODE
+if (functionNum == 4 )then
+    alias inodei R2;
+    alias currentPID R3;
+
+
+    while ( [FILE_STATUS_TABLE + inodei*4 ] != -1)do
+        [PROCESS_TABLE + ( currentPID * 16) + 4] = WAIT_FILE;
+        [PROCESS_TABLE + ( currentPID * 16) + 5] = inodei;
+        multipush(R1,R2,R3);
+        R1 = RELEASE_LOCK;
+		R2 = KERN_LOCK;
+		call ACCESS_CONTROL;
+		
+        call SCHEDULER;
+        
+        R1 = ACQUIRE_KERN_LOCK;
+		call ACCESS_CONTROL;
+        multipop(R1,R2,R3);
+    endwhile;
+
+
+    if ( [INODE_TABLE + 16*inodei] == -1 )then
+        R0 = -1;
+    else
+        //Locked
+        [FILE_STATUS_TABLE + inodei*4 ] = currentPID;
+        R0 = 0;
+    endif;
+
+endif;
+
+
+//RELEASE INODE
+if (functionNum == 5 )then
+    alias inodei R2;
+    alias currentPID R3;
+    alias i R4;
+
+    if ( [FILE_STATUS_TABLE + inodei*4 ] != currentPID )then
+        R0 = -1;
+    else
+        [FILE_STATUS_TABLE + inodei*4 ] = -1;
+        i=0;
+        
+        while( i != 16 )do
+            if ( [PROCESS_TABLE + ( i * 16) + 4] == WAIT_FILE )then
+                [PROCESS_TABLE + ( i * 16) + 4] = READY;
+            endif;
+            i = i + 1;
+        endwhile;
+        R0 = 0;
+    endif;
+
+endif;
+
+
+//ACQUIRE SEMAPHORE
+if (functionNum == 6 )then
+    alias currentPID R2;
+    alias i R3;
+
+    i = 0;
+
+    while(i < 32 && [SEMAPHORE_TABLE + i*4 + 1] != 0)do
+        i = i + 1 ;
+    endwhile;
+    
+    if (i == 32)then
+        R0 = -1;
+    else    
+    
+        [SEMAPHORE_TABLE + i*4 + 0] = -1;
+        //Process Count
+        [SEMAPHORE_TABLE + i*4 + 1] = 1;
+        R0 = i;
+    endif;
+endif;
+
+
+//RELEASE SEMAPHORE
+if (functionNum == 7 )then
+    alias semId R2;
+    alias currentPID R3;
+    alias i R4;
+
+
+    if ( [SEMAPHORE_TABLE + semId*4 ] ==  currentPID )then
+        //Unlock sempahore
+        [SEMAPHORE_TABLE + semId*4 ] = -1;
+        i=0;
+        while (i<16)do
+            if ( [ PROCESS_TABLE + i*16 + 4 ] == WAIT_SEMAPHORE && [ PROCESS_TABLE + i*16 + 5 ] == semId )then
+                [ PROCESS_TABLE + i*16 + 4 ] = READY;
+            endif;
+            i = i + 1;
+        endwhile;
+    endif;
+
+    [SEMAPHORE_TABLE + semId*4 + 1] = [SEMAPHORE_TABLE + semId*4 + 1] - 1;
+
+endif;
+
+//ACQUIRING TERMINAL
+if ( functionNum == 8 )then
+    alias currentPID R2;
+    while( [ TERMINAL_STATUS_TABLE + 0 ] == 1 )do
+        [PROCESS_TABLE + ( currentPID * 16) + 4] = WAIT_TERMINAL;
+        multipush(R1,R2,R3);
+        R1 = RELEASE_LOCK;
+        R2 = KERN_LOCK;
+        call ACCESS_CONTROL;
+        
+        call SCHEDULER;
+        
+        R1 = ACQUIRE_KERN_LOCK;
+        call ACCESS_CONTROL;
+        multipop(R1,R2,R3);
+    endwhile;
+    [ TERMINAL_STATUS_TABLE + 0 ] = 1;
+    [ TERMINAL_STATUS_TABLE + 1 ] = currentPID;
+endif;
+
+
+//RELEASE TERMINAL
+if ( functionNum == 9 )then
+    alias currentPID R2;
+    alias i R4;
+
+    if ( [ TERMINAL_STATUS_TABLE + 1 ] != currentPID) then
+        R0 = -1;
+    else
+        [ TERMINAL_STATUS_TABLE + 0 ] = 0;
+        i=0;
+        while( i != 16 )do
+            if ( [PROCESS_TABLE + ( i * 16) + 4] == WAIT_TERMINAL )then
+                [PROCESS_TABLE + ( i * 16) + 4] = READY;
+            endif;
+            i = i + 1;
+        endwhile;
+        R0 = 0;
+
+    endif; 
+
+endif;
+
+
+return;

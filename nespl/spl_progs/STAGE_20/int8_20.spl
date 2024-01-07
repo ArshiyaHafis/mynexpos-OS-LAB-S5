@@ -1,0 +1,224 @@
+//INT 8
+//print "INT 8";
+
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 9] = 8;
+
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1;
+
+
+alias childPID R0;
+alias i R1;
+alias currentPID R10;
+alias pTable R11;
+alias cpTable R12;
+
+currentPID = [SYSTEM_STATUS_TABLE + 1];
+pTable = PROCESS_TABLE + (currentPID * 16);
+
+R1 = 1;
+call MOD_1;
+
+cpTable = PROCESS_TABLE + (childPID * 16);
+
+if(childPID == -1) then
+	[pTable + 9] = 0;
+	SP = [pTable+ 13];
+	ireturn;
+endif;
+
+alias ptbr R2;
+ptbr = [pTable + 14];
+
+
+
+//allocating heap for parent if it does not have any
+i = 0;
+while(i < 2) do
+
+	if([ptbr + 2*i + 4] == -1) then
+	
+		multipush(R0,R1,R2,R10,R11);
+		R1 = 1;
+		call MOD_2;
+		R3 = R0;
+		multipop(R0,R1,R2,R10,R11);
+		
+		[ptbr + 2*i + 4] = R3;
+		[ptbr + 2*i + 5] = "1110";
+		
+	endif;
+	
+	i = i + 1;
+	
+endwhile;
+
+
+
+
+//allocating stack pages for child
+alias childPTBR R3;
+childPTBR = [cpTable + 14];
+i = 0;
+while(i < 2) do
+
+	
+	
+		multipush(R0,R1,R2,R3,R10,R11);
+		R1 = 1;
+		call MOD_2;
+		R4 = R0;
+		multipop(R0,R1,R2,R3,R10,R11);
+		[childPTBR + 2*i + 16] = R4;
+		[childPTBR + 2*i + 17] = "0110";
+		
+	
+	
+	i = i + 1;
+	
+endwhile;
+
+
+
+//allocating user area page for child
+multipush(R0,R1,R2,R3,R10,R11);
+R1 = 1;
+call MOD_2;
+R4 = R0;
+multipop(R0,R1,R2,R3,R10,R11);
+
+[cpTable + 11] = R4;
+
+//initializing child process table
+[cpTable + 3] = [pTable + 3];  //user id
+[cpTable + 6] = [pTable + 6];  //swap flag
+[cpTable + 10] = [pTable + 10]; //swap status field
+[cpTable + 13] = [pTable + 13]; //uptr
+[cpTable + 7] = [pTable + 7]; //inode index
+
+[cpTable + 0] = 0; //tick
+[cpTable + 9] = 0; //mode
+[cpTable + 12] = 0; //kptr
+
+[cpTable + 2] = currentPID; //ppid
+[cpTable + 4] = CREATED;
+
+
+
+
+//copying per-process resource table
+
+i = 0;
+while(i < 16) do
+	[(([cpTable + 11] + 1) * 512 ) - 16 + i] = [(([pTable + 11] + 1) * 512 ) - 16 + i];
+	i = i + 1;
+endwhile;
+
+
+
+
+//copying Disk Map Table
+
+alias disk_map_table_entry_c R4;
+alias disk_map_table_entry_p R5;
+disk_map_table_entry_p = DISK_MAP_TABLE + currentPID*10;
+disk_map_table_entry_c = DISK_MAP_TABLE + childPID*10;
+
+i = 0;
+while(i < 10) do
+	[disk_map_table_entry_c + i] = [disk_map_table_entry_p + i];
+	i = i + 1;
+endwhile;
+
+
+
+
+//initialize page table
+
+//library
+[childPTBR + 0] = [ptbr+0];
+[childPTBR + 1] = [ptbr+1];
+[childPTBR + 2] = [ptbr+2];
+[childPTBR + 3] = [ptbr+3];
+
+R9 = [MEMORY_FREE_LIST + [ptbr + 0]];
+R9 = R9 + 1;
+
+R9 = [MEMORY_FREE_LIST + [ptbr + 2]];
+R9 = R9 + 1;
+
+
+
+
+//heap
+[childPTBR + 4] = [ptbr+4];
+[childPTBR + 5] = [ptbr+5];
+[childPTBR + 6] = [ptbr+6];
+[childPTBR + 7] = [ptbr+7];
+
+[MEMORY_FREE_LIST + [ptbr + 4]] = [MEMORY_FREE_LIST + [ptbr + 4]] + 1;
+[MEMORY_FREE_LIST + [ptbr + 6]] = [MEMORY_FREE_LIST + [ptbr + 6]] + 1;
+
+
+
+//code
+i = 0;
+
+while(i < 4) do
+	R9 = ptbr + 2*i + 8;
+	[childPTBR + 2*i + 8] = [R9];
+	[childPTBR + 2*i + 9] = [R9 + 1];
+	
+	if([R9] != - 1) then
+		[MEMORY_FREE_LIST + [R9]] = [MEMORY_FREE_LIST + [R9]] + 1;
+	endif;
+	i = i + 1;
+endwhile;
+
+
+//stack is done
+
+
+
+// copy stack word by word
+alias j R6;
+j = 0;
+i = 0;
+
+
+
+
+while(j<2) do
+	
+	while(i<512) do
+		[[childPTBR + 16 + 2*j] * 512 + i] = [[ptbr + 16 + 2*j] * 512 + i];
+		i = i + 1;
+	endwhile;
+	j = j + 1;
+endwhile;
+
+
+
+
+//setting BP value to top of child kernel stack
+[[cpTable + 11] * 512] = BP;
+
+
+//set return value
+alias cSP R7;
+cSP = [cpTable + 13] - 1;
+
+
+[[childPTBR + 2 * ((cSP)/ 512)] * 512 + ((cSP) % 512)] = 0;
+
+alias pSP R8;
+pSP = [pTable + 13] - 1;
+[[ptbr + 2 * ((pSP)/ 512)] * 512 + ((pSP) % 512)] = childPID;
+
+
+
+[pTable + 9] = 0;
+SP = [pTable + 13];
+
+
+ireturn;

@@ -1,0 +1,24 @@
+[PROCESS_TABLE + 16 * [SYSTEM_STATUS_TABLE+1] + 13] = SP;
+SP = [PROCESS_TABLE + 16 * [SYSTEM_STATUS_TABLE+1] + 11] * 512 - 1;
+backup;
+
+alias reqPID R0;
+reqPID = [TERMINAL_STATUS_TABLE+1];
+
+alias reqProcessTableEntry R1;
+reqProcessTableEntry = PROCESS_TABLE + 16 * reqPID;
+[reqProcessTableEntry+8] =  P0;				//store input value in input buffer in process table
+
+//release the terminal
+multipush(R0, R1);
+R1 = 9;
+R2 = reqPID;		//The current process did not acquire the terminal. The process with reqPID as PID is holding the terminal.
+
+call RESOURCE_MANAGER;
+
+multipop(R0, R1);
+
+restore;
+
+SP = [PROCESS_TABLE + (16 * [SYSTEM_STATUS_TABLE+1]) + 13];
+ireturn;

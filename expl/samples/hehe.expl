@@ -1,0 +1,12 @@
+int main()
+{
+    decl
+    str num;
+    int temp ;
+    enddecl
+    begin
+        num="apple";
+        temp = exposcall("Write", -2, num);
+    return 0;
+    end
+}

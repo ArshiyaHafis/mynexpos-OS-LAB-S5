@@ -1,0 +1,95 @@
+//ACCESS CONTROL MODULE
+// print "MOD8";
+
+define TURN_KERN_LOCK 29576;
+define FLAGS_KERN_LOCK 29579;
+define TURN_SCHED_LOCK 29577;
+define FLAGS_SCHED_LOCK 29581;
+
+alias functionNum R1;
+
+
+// TURN_KERN_LOCK = KERN_LOCK;
+// TURN_SCHED_LOCK = SCHED_LOCK;
+// FLAGS_KERN_LOCK = ACCESS_LOCK_TABLE+3;
+// FLAGS_SCHED_LOCK = ACCESS_LOCK_TABLE+5;
+
+//Acquire Kern Lock
+if (functionNum == 1)then
+
+
+    //If core is secondary
+    if (CORE == 1)then
+        //If paging status on or logout_status is on
+        if ( [SYSTEM_STATUS_TABLE + 5] != 0 ||  [SYSTEM_STATUS_TABLE + 7] == 1 )then
+            [ PROCESS_TABLE + 16*[SYSTEM_STATUS_TABLE + 5*CORE + 1] + 4 ] = READY;
+            multipush(R1);
+            call SCHEDULER;
+            multipop(R1);
+        endif;
+    endif;
+
+    //Spin Locking Kern Lock
+    [ FLAGS_KERN_LOCK + CORE ] = 1;
+    //Turn is set to Secondary
+    [ TURN_KERN_LOCK ] = 1-CORE;
+
+    //Busy Loop
+    while( [ FLAGS_KERN_LOCK + (1-CORE) ] == 1 && [ TURN_KERN_LOCK ] == (1-CORE) )do
+        continue;
+    endwhile;
+    return;
+    
+endif;
+
+// Acquire Sched Lock
+if (functionNum == 2)then
+
+    //Spin Locking Sched Lock
+    [ FLAGS_SCHED_LOCK + CORE ] = 1;
+    //Turn is set to Secondary
+    [ TURN_SCHED_LOCK ] = 1-CORE;
+
+    //Busy Loop
+    while( [ FLAGS_SCHED_LOCK + (1-CORE) ] == 1 && [ TURN_SCHED_LOCK ] == (1-CORE) )do
+        // print CORE;
+        continue;
+    endwhile;
+
+
+    return;
+
+endif;
+
+
+
+//Acquire GLock
+if (functionNum == 3)then
+
+    //Spin Locking Kern Lock
+    while( tsl( GLOCK ) == 1 )do
+        continue;
+    endwhile;
+    return;
+
+endif;
+
+//Release Any Lock
+if (functionNum == 4)then
+
+    alias LockVariableAddr R2;
+
+    if (LockVariableAddr == KERN_LOCK)then
+        [ FLAGS_KERN_LOCK + CORE ] = 0;
+    endif;
+
+    if (LockVariableAddr == SCHED_LOCK)then
+        [ FLAGS_SCHED_LOCK + CORE ] = 0;
+    endif;
+    return;
+
+endif;
+
+
+
+return;

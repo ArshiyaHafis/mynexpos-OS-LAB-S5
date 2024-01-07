@@ -1,0 +1,203 @@
+//load library code form disk to memory
+loadi(63,13);
+loadi(64,14);
+
+//load init program
+loadi(65,7);
+loadi(66,8);
+
+
+//load int10 module
+loadi(22,35);
+loadi(23,36);
+
+
+//load exception handler
+loadi(2, 15);
+loadi(3, 16);
+
+
+//load the timer interupt routine
+loadi(4, 17);
+loadi(5, 18);
+
+//load int7
+loadi(16,29);
+loadi(17,30);
+
+//load exec-1
+loadi(86,69);
+
+//load exec-2
+loadi(96,70);
+
+//scheduler - mod5
+loadi(50,63);
+loadi(51,64);
+
+
+
+//---------------------------------------------------->init program<--------------------------------------------
+
+PTBR = PAGE_TABLE_BASE + 20;
+PTLR = 10;
+
+//library - page 0 and 1
+[PTBR+0] = 63;
+[PTBR+1] = "0100";
+[PTBR+2] = 64;
+[PTBR+3] = "0100";
+
+//heap - page 2 and 3
+[PTBR+4] = 78;
+[PTBR+5] = "0110";
+[PTBR+6] = 79;
+[PTBR+7] = "0110";
+
+//page 4 and 5 - code
+[PTBR+8] = 65;
+[PTBR+9] = "0100";
+[PTBR+10] = 66;
+[PTBR+11] = "0100";
+
+[PTBR+12] = -1;
+[PTBR+13] = "0000";
+[PTBR+14] = -1;
+[PTBR+15] = "0000";
+
+
+//page 8 and 9- stack
+[PTBR+16] = 76;
+[PTBR+17] = "0110";
+[PTBR+18] = 77;
+[PTBR+19] = "0110";
+
+
+//PROCESS TABLE FOR INIT PID =1
+[PROCESS_TABLE + 16 + 1] = 1;
+[PROCESS_TABLE + 16 + 4] = CREATED;
+[PROCESS_TABLE + 16 + 11] = 80;		//UAreaPgNo.
+[PROCESS_TABLE + 16 + 12] = 0;		//KPTR
+[PROCESS_TABLE + 16 + 13] = 8*512;		//UPTR : LOGICAL ADDRESS OF userSP
+[PROCESS_TABLE + 16 + 14] = PTBR;
+[PROCESS_TABLE + 16 + 15] = PTLR;
+
+
+[76*512] = [65 * 512 + 1];
+
+
+
+
+//--------------------------------------------------->EXEC PROGRAM<---------------------------------------------
+PTBR = PAGE_TABLE_BASE + 40;
+PTLR = 10;
+
+//library - page 0 and 1
+[PTBR+0] = 63;
+[PTBR+1] = "0100";
+[PTBR+2] = 64;
+[PTBR+3] = "0100";
+
+//heap - page 2 and 3
+[PTBR+4] = 88;
+[PTBR+5] = "0110";
+[PTBR+6] = 89;
+[PTBR+7] = "0110";
+
+//page 4 and 5 - code
+[PTBR+8] = 86;
+[PTBR+9] = "0100";
+[PTBR+10] = -1;
+[PTBR+11] = "0000";
+
+[PTBR+12] = -1;
+[PTBR+13] = "0000";
+[PTBR+14] = -1;
+[PTBR+15] = "0000";
+
+
+//page 8 and 9- stack
+[PTBR+16] = 90;
+[PTBR+17] = "0110";
+[PTBR+18] =91;
+[PTBR+19] = "0110";
+
+
+//PROCESS TABLE FOR EXEC PID =2
+[PROCESS_TABLE + 32 + 1] = 2;
+[PROCESS_TABLE + 32 + 4] = CREATED;
+[PROCESS_TABLE + 32 + 11] = 92;		//UAreaPgNo.
+[PROCESS_TABLE + 32 + 12] = 0;		//KPTR
+[PROCESS_TABLE + 32 + 13] = 8*512;		//UPTR : LOGICAL ADDRESS OF userSP
+[PROCESS_TABLE + 32 + 14] = PTBR;
+[PROCESS_TABLE + 32 + 15] = PTLR;
+
+
+[90*512] = [86 * 512 + 1];
+
+
+
+//--------------------------------------------------->EXEC2 PROGRAM<---------------------------------------------
+PTBR = PAGE_TABLE_BASE + 60;
+PTLR = 10;
+
+//library - page 0 and 1
+[PTBR+0] = 63;
+[PTBR+1] = "0100";
+[PTBR+2] = 64;
+[PTBR+3] = "0100";
+
+//heap - page 2 and 3
+[PTBR+4] = 94;
+[PTBR+5] = "0110";
+[PTBR+6] = 95;
+[PTBR+7] = "0110";
+
+//page 4 and 5 - code
+[PTBR+8] = 96;
+[PTBR+9] = "0100";
+[PTBR+10] = -1;
+[PTBR+11] = "0000";
+
+[PTBR+12] = -1;
+[PTBR+13] = "0000";
+[PTBR+14] = -1;
+[PTBR+15] = "0000";
+
+
+//page 8 and 9- stack
+[PTBR+16] = 97;
+[PTBR+17] = "0110";
+[PTBR+18] = 98;
+[PTBR+19] = "0110";
+
+
+//PROCESS TABLE FOR EXEC PID =3
+[PROCESS_TABLE + 48 + 1] = 3;
+[PROCESS_TABLE + 48 + 4] = CREATED;
+[PROCESS_TABLE + 48 + 11] = 99;		//UAreaPgNo.
+[PROCESS_TABLE + 48 + 12] = 0;		//KPTR
+[PROCESS_TABLE + 48 + 13] = 8*512;		//UPTR : LOGICAL ADDRESS OF userSP
+[PROCESS_TABLE + 48 + 14] = PTBR;
+[PROCESS_TABLE + 48 + 15] = PTLR;
+
+
+[97*512] = [96 * 512 + 1];
+
+
+
+[PROCESS_TABLE + 68] = TERMINATED;
+[PROCESS_TABLE + 84] = TERMINATED;
+[PROCESS_TABLE + 100] = TERMINATED;
+[PROCESS_TABLE + 116] = TERMINATED;
+[PROCESS_TABLE + 132] = TERMINATED;
+[PROCESS_TABLE + 148] = TERMINATED;
+[PROCESS_TABLE + 164] = TERMINATED;
+[PROCESS_TABLE + 180] = TERMINATED;
+[PROCESS_TABLE + 196] = TERMINATED;
+[PROCESS_TABLE + 212] = TERMINATED;
+[PROCESS_TABLE + 228] = TERMINATED;
+[PROCESS_TABLE + 244] = TERMINATED;
+return;
+
+

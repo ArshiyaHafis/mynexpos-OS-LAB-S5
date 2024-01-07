@@ -1,0 +1,70 @@
+alias functionNum R1;
+alias currentPID R2;
+
+if (functionNum == 2) then			//disk load
+	//print "disk load";
+	alias pgNo R3;
+	alias blockNo R4;
+	multipush(R1, R2, R3, R4);
+	R1=3;
+	call RESOURCE_MANAGER;
+	multipop(R1, R2, R3, R4);
+	
+	[DISK_STATUS_TABLE] = 1;
+	[DISK_STATUS_TABLE + 1] = 0;	//LOAD
+	[DISK_STATUS_TABLE + 2] = pgNo;
+	[DISK_STATUS_TABLE + 3] = blockNo;
+	[DISK_STATUS_TABLE + 4] = currentPID;
+	load(pgNo, blockNo);
+	[PROCESS_TABLE + currentPID*16 + 4 ] = WAIT_DISK;
+	
+	multipush(R1,R2,R3,R4);
+	call MOD_5;
+	multipop(R1,R2,R3,R4);
+	return;
+endif;
+
+
+if (functionNum == 3) then			//terminal write
+	//print "terminal write";
+	multipush(R1, R2, R3);
+	R1=8;
+	R2 = currentPID;
+	call RESOURCE_MANAGER;
+	multipop(R1, R2, R3);
+	print R3;
+	
+	multipush(R1, R2, R3);
+	R1=9;
+	R2 = currentPID;
+	call RESOURCE_MANAGER;
+	multipop(R1, R2, R3);
+	return;
+endif;
+
+
+
+if (functionNum == 4) then			//terminal read
+	//print "terminal read";
+	multipush(R1, R2, R3);
+	R1 = 8;
+	R2 = currentPID;
+	call MOD_0;
+	multipop(R1, R2, R3);
+	read;
+	[PROCESS_TABLE + (currentPID * 16) + 4] = WAIT_TERMINAL;
+	
+	//context switch module
+	
+	multipush(R1,R2,R3);
+	call MOD_5;
+	multipop(R1,R2,R3);
+	
+	alias physicalAddr R4;
+	physicalAddr = [PTBR + 2 * ((R3)/512)] * 512 + (R3)%512;
+	[physicalAddr] = [PROCESS_TABLE + (currentPID * 16) + 8];
+	return;
+else
+	return;
+endif;
+	

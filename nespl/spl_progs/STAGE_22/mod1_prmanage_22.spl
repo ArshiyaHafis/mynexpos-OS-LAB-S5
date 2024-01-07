@@ -1,0 +1,151 @@
+alias functionNo R1;
+alias currentPID R2;
+
+
+if(functionNo == 1) then
+	alias pID R0; 
+    	alias i R3;
+    	alias state R4;
+    	pID =-1;
+    	i = 0;
+    	while(i<16)do
+        	state = [PROCESS_TABLE + i * 16 + 4];
+        	if(state == TERMINATED) then
+        	    	alias pTable R5;
+        		pTable = PROCESS_TABLE + i * 16;
+            		[pTable + 1] = i;
+			[pTable + 4] = ALLOCATED;
+			[pTable + 14] = PAGE_TABLE_BASE + (i * 20);
+			[pTable + 15] = 10;
+            		pID = i;
+            		break;
+        	endif;
+        	i = i+1;
+	endwhile;
+   	return;
+endif;
+
+if(functionNo == 2) then									//free user area page
+	alias userAreapg R3;
+	userAreapg = [PROCESS_TABLE + (currentPID * 16) + 11];
+	
+	alias i R4;
+	i=0;
+	while(i<8) do										//invoke release sempahore for all the terminated processes
+		if([(userAreapg * 512) + 496 + (2 * i)] == SEMAPHORE) then
+			multipush(R1, R2, R3, R4);
+			R1 = 7;
+			R2 = currentPID;
+			R3 = [(userAreapg * 512) + 496 + (2 * i) + 1];
+			call MOD_0;
+			multipop(R1, R2, R3, R4);
+		endif;
+		[(userAreapg * 512) + 496 + (2 * i)] = -1;
+		i = i + 1;
+	endwhile; 
+	
+	multipush(R1,R2, R3, R4);
+	R1 = 2;
+	R2 = userAreapg;
+	call MOD_2;
+	multipop(R1,R2, R3, R4);
+	
+	return;
+	
+endif;
+
+
+//exit process
+if(functionNo == 3) then
+	multipush(R1,R2);
+	R1 = 4;
+	R2 = currentPID;
+	call MOD_1;
+	multipop(R1,R2);
+	
+	
+	multipush(R1,R2);
+	R1 = 2;
+	R2 = currentPID;
+	call MOD_1;
+	multipop(R1,R2);
+	
+	[PROCESS_TABLE + (currentPID * 16) + 4] = TERMINATED;
+	if([PROCESS_TABLE+currentPID*16+9] != 9) then
+        	alias i R5;
+        	alias currentPA R4;
+
+        	i = 0;
+        	while(i < MAX_PROC_NUM) do
+            		currentPA = PROCESS_TABLE + i * 16;
+            
+            // Loop through the process table of all processes and change the state to READY for the processes whose state is tuple (WAIT_PROCESS, current PID)
+            		if([currentPA + 4] == WAIT_PROCESS && [currentPA + 5] == currentPID) then
+                		[currentPA + 4] = READY;
+                		[currentPA + 5] = -1;
+            		endif;
+
+            //  if the PPID of a process is PID of current process, then invalidate PPID field to -1.
+            		if([currentPA + 2] == currentPID) then
+                		[currentPA + 2] = -1;
+            		endif;
+            		i = i + 1;
+        	endwhile;
+
+    	endif;
+    return;
+endif;
+
+
+//free page table
+if(functionNo == 4) then
+	alias ptbr R3;
+	ptbr = [PROCESS_TABLE + currentPID*16 + 14];
+	[ptbr + 0] = -1;
+	[ptbr + 1] = "0000";
+	[ptbr + 2] = -1;
+	[ptbr + 3] = "0000";
+	
+	alias i R4;
+	i=4;
+	while(i<20) do
+		if([ptbr + i]!=-1) then
+			multipush(R1, R2, R3, R4);
+			R1=2;
+			R2 = [ptbr + i];
+			call MOD_2;
+			multipop(R1, R2, R3, R4);
+			
+			[ptbr + i] = -1;
+			[ptbr + i + 1] = "0000";
+		endif;
+		i=i+2;
+	endwhile;
+	
+	alias disk_entry R5;
+	disk_entry = DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10;
+	i=2;
+	while(i <4) do
+		if([disk_entry + i] != -1) then
+			multipush(R0,R1,R2,R3,R4,R5);
+			R1 = 4;
+			R2 = [disk_entry + i];
+			call MOD_2;
+			multipop(R0,R1,R2,R3,R4,R5);
+		endif;
+		i = i + 1;
+	endwhile;
+	
+	[disk_entry + 0] = -1;
+	[disk_entry + 1] = -1;
+	[disk_entry + 2] = -1;
+	[disk_entry + 3] = -1;
+	[disk_entry + 4] = -1;
+	[disk_entry + 5] = -1;
+	[disk_entry + 6] = -1;
+	[disk_entry + 7] = -1;
+	[disk_entry + 8] = -1;
+	[disk_entry + 9] = -1;
+	return;
+endif;
+

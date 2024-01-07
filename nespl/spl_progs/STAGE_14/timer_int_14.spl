@@ -1,0 +1,21 @@
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE+1] * 16) + 13] = SP;	//Save the value of SP to the USER SP field in the Process Table entry of the process.
+
+
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE+1] * 16) + 11] * 512 - 1;	// Set the value of SP to the beginning of User Area Page.
+
+backup;		//Backup the register context of the current process
+
+alias currentPID R0;
+alias process_table_entry R1;
+currentPID = [SYSTEM_STATUS_TABLE+1];
+process_table_entry = PROCESS_TABLE + currentPID * 16;
+
+[process_table_entry + 4] = READY;
+
+call MOD_5;
+
+
+restore;		//Restore the user context from the kernel stack
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE+1] * 16) + 13];		//set SP to the user SP saved in Process Table, before returning to user mode
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9]=0;
+ireturn;

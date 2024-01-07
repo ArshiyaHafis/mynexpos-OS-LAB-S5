@@ -1,0 +1,50 @@
+//load init program
+loadi(65,7);
+loadi(66,8);
+
+
+//load int10 module
+loadi(22,35);
+loadi(23,36);
+
+
+//load exception handler
+loadi(2, 15);
+loadi(3, 16);
+
+
+PTBR = PAGE_TABLE_BASE;
+PTLR = 10;		//since we need pages until 0-8, we specify atleast 9 pages
+
+
+[PTBR+0] = -1;
+[PTBR+1] = "0000";
+[PTBR+2] = -1;
+[PTBR+3] = "0000";
+[PTBR+4] = -1;
+[PTBR+5] = "0000";
+[PTBR+6] = -1;
+[PTBR+7] = "0000";
+
+//page 4 - code
+[PTBR+8] = 65;
+[PTBR+9] = "0100";
+
+//page 5 - code
+[PTBR+10] = 66;
+[PTBR+11] = "0100";
+[PTBR+12] = -1;
+[PTBR+13] = "0000";
+[PTBR+14] = -1;
+[PTBR+15] = "0000";
+
+//page 8 - stack
+[PTBR+16] = 76;
+[PTBR+17] = "0110";
+[PTBR+18] = -1;
+[PTBR+19] = "0000";
+
+
+[76*512] = 4*512;	// points to the 4th page to start code
+SP = 8*512;		//point to stack at 8th logical page
+ireturn;

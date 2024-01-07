@@ -1,0 +1,52 @@
+alias currentPID R0;
+currentPID = [SYSTEM_STATUS_TABLE+1];
+
+multipush(BP);		//push bp
+
+alias pTable R1;
+pTable = PROCESS_TABLE + currentPID * 16;
+
+[pTable + 12] = SP % 512;
+[pTable + 14] = PTBR;
+[pTable + 15] = PTLR;
+
+alias i R4;
+alias new_process_table R3;
+alias newPID R2;
+newPID =0;				//idle process
+i =  [SYSTEM_STATUS_TABLE+1]+1; 	//current id +1
+
+while(i<16) do
+    pTable = PROCESS_TABLE + i * 16;
+    if(([pTable + 4] == READY) || ([pTable + 4] == CREATED) ) then
+        newPID = i;
+        break;
+    endif;
+    i=i+1;
+endwhile;
+
+
+new_process_table = PROCESS_TABLE + newPID * 16;
+
+
+
+SP =  [new_process_table + 11] * 512 + [new_process_table + 12] ;		//sp = Uareapgno*512 + kptr
+PTBR = [new_process_table + 14];						//new process PTBR
+PTLR = [new_process_table + 15];						//new process PTLR
+
+//update new pid in system status tablet
+[SYSTEM_STATUS_TABLE + 1] = newPID;						//currentPID updated
+
+
+if([new_process_table + 4] == CREATED) then
+	SP = [new_process_table +13];			//SP=UPTR
+	[new_process_table + 4] = RUNNING;			//change state to running
+	[new_process_table + 9] = 0; 			// MODE =0
+	BP = [[new_process_table + 11] * 512];		//Store the value in the first word of the kernel stack to the BP register
+	ireturn;
+endif;
+
+
+[new_process_table + 4] = RUNNING;			//new process = running
+multipop(BP);						//bp of new process
+return;

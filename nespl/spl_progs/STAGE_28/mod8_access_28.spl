@@ -1,0 +1,37 @@
+alias functionNumber R1;
+if(functionNumber == ACQUIRE_KERN_LOCK) then
+    if(CORE == SECONDARY_CORE) then
+        if([SYSTEM_STATUS_TABLE+5] == 1 || [SYSTEM_STATUS_TABLE+7] ==1) then
+            alias pTable R2;
+            pTable = PROCESS_TABLE + ([SYSTEM_STATUS_TABLE+6] * 16);
+            [pTable+4] = READY;
+            
+            multipush(R1,R2);
+            call SCHEDULER;
+            multipop(R1,R2);      
+        endif;
+    endif;
+    while( tsl (KERN_LOCK) == 1) do
+        continue;
+    endwhile;
+endif;
+
+if(functionNumber == ACQUIRE_SCHED_LOCK) then
+    while(tsl(SCHED_LOCK) == 1) do
+        continue;
+    endwhile;
+endif;
+
+if(functionNumber  == ACQUIRE_GLOCK) then   
+    while(tsl(GLOCK) == 1) do
+        continue;
+    endwhile;
+
+endif;
+
+if(functionNumber == RELEASE_LOCK) then
+    alias lockVarAddress R2;
+    [lockVarAddress] = 0;
+
+endif;
+return;

@@ -1,0 +1,14 @@
+load --int=timer $HOME/myexpos/spl/spl_progs/STAGE_14/timer_int_14.xsm
+load --os $HOME/myexpos/spl/spl_progs/STAGE_14/os_startup_14.xsm
+load --init ../expl/expl_progs/gcd.xsm
+load --int=10 ../spl/spl_progs/STAGE_14/int10_14.xsm
+load --exhandler ../spl/spl_progs/haltprog.xsm
+load --library ../expl/library.lib
+load --int=6 ../spl/spl_progs/STAGE_16/int6_16.xsm
+load --int=7 ../spl/spl_progs/STAGE_15/int7_15.xsm
+load --int=console ../spl/spl_progs/STAGE_16/console_int_handler.xsm
+load --idle ../expl/samples/idle_12.xsm
+load --module 0 ../spl/spl_progs/STAGE_15/mod0_resmanage_15.xsm
+load --module 4 ../spl/spl_progs/STAGE_16/mod4_devmanage_16.xsm
+load --module 5 ../spl/spl_progs/STAGE_14/mod5_scheduler_14.xsm
+load --module 7 ../spl/spl_progs/STAGE_16/boot_mod_16.xsm

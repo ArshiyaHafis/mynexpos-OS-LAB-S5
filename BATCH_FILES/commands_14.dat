@@ -1,0 +1,11 @@
+load --int=timer $HOME/myexpos/spl/spl_progs/STAGE_14/timer_int_14.xsm
+load --os $HOME/myexpos/spl/spl_progs/STAGE_14/os_startup_14.xsm
+load --init ../expl/samples/100odd.xsm
+load --int=10 ../spl/spl_progs/STAGE_14/int10_14.xsm
+load --exhandler ../spl/spl_progs/haltprog.xsm
+load --library ../expl/library.lib
+load --int=7 ../spl/spl_progs/sample_int7.xsm
+load --idle ../expl/samples/idle_12.xsm
+load --module 7 ../spl/spl_progs/STAGE_14/boot_mod_14.xsm
+load --module 5 ../spl/spl_progs/STAGE_14/mod5_scheduler_14.xsm
+load --exec ../expl/samples/100even.xsm

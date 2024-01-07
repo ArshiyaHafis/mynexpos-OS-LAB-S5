@@ -1,0 +1,83 @@
+alias currentPID R0;
+currentPID = [SYSTEM_STATUS_TABLE + 1];
+
+multipush(BP);
+
+alias pTable R1;
+pTable = PROCESS_TABLE + currentPID * 16;
+
+[pTable + 12] = SP % 512;
+[pTable + 14] = PTBR;
+[pTable + 15] = PTLR;
+
+alias i R2;
+alias newPID R3;
+
+if([SYSTEM_STATUS_TABLE + 5] != 0) then
+	if([PROCESS_TABLE + 15*16 + 4] == WAIT_DISK) then 
+		newPID = 0;
+	else
+		newPID = 15;
+	endif;
+else
+
+	i = currentPID + 1;
+
+	//swapper daemon cannot be scheduled
+	if(i > 14) then
+		i = 1;
+	endif;
+
+	while(i != currentPID) do
+		if(([PROCESS_TABLE + i * 16 + 4] == CREATED || [PROCESS_TABLE + i * 16 + 4] == READY) && [PROCESS_TABLE + i * 16 + 6] == 0) then
+			newPID = i;
+			break;
+		endif;
+	
+		i = i + 1;
+	
+		//dont schedule swapper daemon
+		if(i > 14) then
+	
+			if(currentPID == 0 || currentPID == 15) then
+				i = currentPID;
+				break;
+			endif;
+		
+			i = 1;
+		endif;
+	
+	endwhile;
+
+	if(i == currentPID) then
+		newPID = 0;
+	endif;
+
+endif;
+
+
+
+alias newpTable R4;
+newpTable = PROCESS_TABLE + newPID * 16;
+
+//Set back Kernel SP, PTBR, PTLR
+SP = [newpTable + 11] * 512 + [newpTable + 12];
+PTBR = [newpTable + 14];
+PTLR = [newpTable + 15];
+[SYSTEM_STATUS_TABLE + 1] = newPID;
+
+
+if([newpTable + 4] == CREATED) then
+	SP = [newpTable + 13];
+	BP = [[newpTable + 11] * 512];
+	
+	[newpTable + 4] = RUNNING;
+	[newpTable + 9] = 0; //setting mode flag to 0
+	ireturn;
+endif;
+
+
+
+[newpTable + 4] = RUNNING;
+multipop(BP);
+return;

@@ -1,0 +1,72 @@
+alias userSP R1;
+alias sysCallNo R2;
+alias pTable R3;
+pTable = PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16;
+[pTable + 13]= SP;
+
+
+SP = [pTable + 11] * 512  - 1 ;							//switch to kernel stack
+PTBR = [pTable + 14] ;
+
+userSP = [pTable + 13];
+sysCallNo = [[PTBR + 2*((userSP-5)/512)] * 512 + ((userSP-5)%512)] ;
+
+[pTable + 9] = sysCallNo;							//mode flag = sys call no
+
+if(sysCallNo == 11) then 							// Getpid
+    [[PTBR + 2*((userSP-1)/512)] * 512 + ((userSP-1)%512)] = [PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+1];		//return pid of current process
+
+endif;
+
+if(sysCallNo == 12) then 							// Getppid
+    [[PTBR + 2*((userSP-1)/512)] * 512 + ((userSP-1)%512)] = [PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16+2];		//return pid of parent process
+    
+endif;
+
+if(sysCallNo == 13) then 							// Wait
+    alias waitPID R4;
+    waitPID  = [[PTBR + 2*((userSP-4)/512)] * 512 + ((userSP-4)%512)];		//get pid of process to be executed when current process in waiting
+    if (waitPID == [SYSTEM_STATUS_TABLE+1] || [PROCESS_TABLE + waitPID*16+4] == TERMINATED || waitPID >= MAX_PROC_NUM || waitPID <0 ) then
+    	//process waiting for itself or doesnt lie in the valid range
+        [[PTBR + 2*((userSP-1)/512)] * 512 + ((userSP-1)%512)] = -1;
+        [pTable + 9] = 0;
+        SP = [pTable + 13];
+        ireturn;
+    endif;
+
+    [PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16 + 4] = WAIT_PROCESS;		//change status
+    [PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16 + 5] = waitPID;
+
+    multipush(R0,R1,R2, R3);
+    call MOD_5;
+    multipop(R0,R1,R2,R3);
+    
+    //reset mode flag
+    [[PTBR + 2*((userSP-1)/512)] * 512 + ((userSP-1)%512)] = 0;
+
+endif;
+
+if(sysCallNo == 14) then // Signal
+    alias i R4;
+    alias currentPID R5;
+    currentPID = [SYSTEM_STATUS_TABLE+1];
+    i = 0;
+    //change (wait, pid) to (ready, -1)
+    while(i < MAX_PROC_NUM) do
+        if ([PROCESS_TABLE + i*16 + 4] == WAIT_PROCESS && [PROCESS_TABLE + i*16 + 5] == currentPID) then
+            [PROCESS_TABLE + i*16 + 4] = READY;
+            [PROCESS_TABLE + i*16 + 5] = -1;
+        endif;
+        i = i + 1;
+    endwhile;
+    
+    //reset mode flag
+    [[PTBR + 2*((userSP-1)/512)] * 512 + ((userSP-1)%512)] = 0;
+
+endif;
+
+
+// At any point of return to user, remember to reset the MODE FLAG and change the stack to user stack.
+[pTable + 9] = 0;
+SP = [pTable + 13];
+ireturn;

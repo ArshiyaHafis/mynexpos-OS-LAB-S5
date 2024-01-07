@@ -1,0 +1,58 @@
+[PROCESS_TABLE + ([SYSTEM_STATUS_TABLE+1] * 16) + 13] = SP;
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE+1] * 16) + 11] * 512 - 1;	
+backup;		//Backup the register context of the current process
+
+if ([SYSTEM_STATUS_TABLE +5]!=0) then									//check paging status
+	if([SYSTEM_STATUS_TABLE+1] == SWAPPER_DAEMON) then					//check if process is swapper daemon pid=15
+	
+		if([SYSTEM_STATUS_TABLE+5] == SWAP_OUT) then					//if swap out
+            R1 = SWAP_OUT;
+            R2 = [SYSTEM_STATUS_TABLE+1];
+            call PAGER_MODULE;
+    	else															//if swap in
+            R1 = SWAP_IN;
+            R2 = [SYSTEM_STATUS_TABLE+1];
+            call PAGER_MODULE;
+    	endif;
+	endif;
+else																	//no swapping
+	if([SYSTEM_STATUS_TABLE+2]< MEM_LOW) then							//mem_free_count < 4?
+        [SYSTEM_STATUS_TABLE+5] = SWAP_OUT;
+	else
+		if([SYSTEM_STATUS_TABLE+4]>0)then								//number of swapped processes>0?
+			alias i R1;
+            alias pTable R2;
+            i = SHELL_PROCESS+1;
+			while(i < MAX_PROC_NUM-1) do
+                pTable  = PROCESS_TABLE + 16 * i; 
+                if([pTable+6]==1 && ([pTable] > MAX_TICK || [SYSTEM_STATUS_TABLE+2] > MEM_HIGH )) then
+					[SYSTEM_STATUS_TABLE+5] = SWAP_IN;                            
+                    break;
+                endif;
+				i = i + 1;
+			endwhile;
+		endif;
+	endif;
+endif;
+                
+
+alias currentPID R0;
+alias process_table_entry R1;
+currentPID = [SYSTEM_STATUS_TABLE+1];
+process_table_entry = PROCESS_TABLE + currentPID * 16;
+
+[process_table_entry + 4] = READY;
+alias iter R1;
+iter=SHELL_PROCESS;
+while(iter<MAX_PROC_NUM-1) do
+    [PROCESS_TABLE + iter*16 ] = [PROCESS_TABLE + iter*16] + 1;
+    iter = iter +1;
+endwhile;
+
+call MOD_5;
+
+
+restore;
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE+1] * 16) + 13];	
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9]=0;
+ireturn;

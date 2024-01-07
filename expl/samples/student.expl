@@ -1,0 +1,33 @@
+type
+Student
+{
+	str name;
+    	int marks;
+}
+endtype
+
+	
+	
+int main()
+{
+	decl
+		Student stu1;
+		int init;
+		str s1;
+	enddecl
+	begin
+		
+		init = exposcall("Heapset");
+		s1="apple";
+        	init = exposcall("Write", -2, s1);
+        	breakpoint;
+		stu1 = exposcall("Alloc", 2);
+		stu1.name = "John";
+		stu1.marks = 89;
+		
+		init = exposcall("Write",-2, stu1.name);
+		init = exposcall("Write",-2, stu1.marks);
+		
+		return 0;
+	end
+}

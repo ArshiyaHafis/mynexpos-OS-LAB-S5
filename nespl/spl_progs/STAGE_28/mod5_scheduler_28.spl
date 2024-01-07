@@ -1,0 +1,144 @@
+multipush(BP);
+
+multipush(R1);
+R1 = 2;
+call MOD_8;
+multipop(R1);
+
+
+alias currentPID R0;
+currentPID = [SYSTEM_STATUS_TABLE + 5*CORE + 1];
+
+alias pTable R1;
+pTable = PROCESS_TABLE + currentPID * 16;
+
+[pTable + 12] = SP % 512;
+[pTable + 14] = PTBR;
+[pTable + 15] = PTLR;
+
+alias i R2;
+alias newPID R3;
+
+
+
+if(CORE == PRIMARY_CORE) then
+
+	if([SYSTEM_STATUS_TABLE + 5] != 0) then
+		if([PROCESS_TABLE + 15*16 + 4] == WAIT_DISK) then 
+			newPID = 0;										//idle process
+		else
+			newPID = 15;									//swapper daemon
+		endif;
+	else
+
+		i = currentPID + 1;
+
+		//swapper daemon and IDLE2 cannot be scheduled
+		if(i > 13) then
+			i = 1;
+		endif;
+
+		while(i != currentPID) do
+			if(([PROCESS_TABLE + i * 16 + 4] == CREATED || [PROCESS_TABLE + i * 16 + 4] == READY) && [PROCESS_TABLE + i * 16 + 6] == 0 &&  i != [SYSTEM_STATUS_TABLE + 6]) then
+				newPID = i;
+				break;
+			endif;
+			i = i + 1;
+			//dont schedule swapper daemon
+			if(i > 13) then
+				if(currentPID == 0 || currentPID == 15) then
+					i = currentPID;
+					break;
+				endif;
+				i = 1;
+			endif;
+		endwhile;
+		if(i == currentPID) then
+			newPID = 0;
+		endif;
+	endif;
+	
+	if(([SYSTEM_STATUS_TABLE + 7] == 1)) then				//logout_status==1
+		if([SYSTEM_STATUS_TABLE + 6] != 14) then			//secondary core not running idle2
+			newPID = 0;
+		else
+			newPID = currentPID;
+		endif;
+	endif;	
+	[SYSTEM_STATUS_TABLE + 1] = newPID;
+	
+	
+
+else
+	if([SYSTEM_STATUS_TABLE + 5] != 0 || [SYSTEM_STATUS_TABLE + 7] == 1) then	//paging status or logout status is set?
+		newPID = 14;							//swapper daemon schedule
+	else
+
+		i = currentPID + 1;
+
+		//idle, login, shell, swapper daemon should never be scheduled
+		if(i < 3 || i > 14) then
+			i = 3;
+		endif;
+	
+		while(i != currentPID) do
+			if(([PROCESS_TABLE + i * 16 + 4] == CREATED || [PROCESS_TABLE + i * 16 + 4] == READY) && [PROCESS_TABLE + i * 16 + 6] == 0 && i != [SYSTEM_STATUS_TABLE + 1]) then
+				newPID = i;
+				break;
+			endif;
+			i = i + 1;
+			if(i > 14) then
+				if(currentPID == 14) then
+					i = currentPID;
+					break;
+				endif;
+				i = 3;
+			endif;
+		endwhile;
+		if(i == currentPID) then
+			newPID = 14;
+		endif;
+	endif;
+	[SYSTEM_STATUS_TABLE + 6] = newPID;		//CURRENT_PID2 = newPID
+	
+
+endif;
+
+
+alias newpTable R4;
+newpTable = PROCESS_TABLE + newPID * 16;
+SP = [newpTable + 11] * 512 + [newpTable + 12];
+PTBR = [newpTable + 14];
+PTLR = [newpTable + 15];
+
+
+
+if([newpTable + 4] == CREATED) then
+
+	multipush(R4);
+	R1 = 4;
+	R2 = ACCESS_LOCK_TABLE + 1;
+	call MOD_8;
+	multipop(R4);
+	
+	BP = [[newpTable + 11] * 512];
+	SP = [newpTable + 13];
+	[newpTable + 4] = RUNNING;
+	[newpTable + 9] = 0;
+	
+	ireturn;
+endif;
+
+
+
+[newpTable + 4] = RUNNING;
+
+
+multipush(R1,R2,R3,R4);
+R1 = 4;
+R2 = ACCESS_LOCK_TABLE + 1;
+call MOD_8;
+multipop(R1,R2,R3,R4);
+
+multipop(BP);
+return;

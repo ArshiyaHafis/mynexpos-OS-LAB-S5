@@ -1,0 +1,202 @@
+alias userSP R1;
+alias sysCallNo R2;
+alias pTable R3;
+
+pTable = PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 5*CORE + 1]*16;
+[pTable + 13]= SP;
+
+SP = [pTable + 11] * 512  - 1 ;
+PTBR = [pTable + 14] ;
+
+userSP = [pTable + 13];
+sysCallNo = [[PTBR + 2*((userSP-5)/512)] * 512 + ((userSP-5)%512)] ;
+[pTable + 9] = sysCallNo;
+
+alias fileName R4;
+fileName  = [[PTBR + 2*((userSP-4)/512)] * 512 + ((userSP-4)%512)] ;
+
+multipush(R1,R2,R3,R4);
+R1 = ACQUIRE_KERN_LOCK;
+call ACCESS_CONTROL;
+multipop(R1,R2,R3,R4);
+
+alias returnAddress R5;
+returnAddress = [PTBR + 2*((userSP-1)/512)] * 512 + ((userSP-1)%512) ;
+
+if(sysCallNo == 1) then 											//  Create
+    alias i R9;
+    i = 0;
+    alias iTable R6;
+    while(i < MAX_FILE_NUM) do 							//check of file already exists in system - inode table
+        iTable = INODE_TABLE + i*16;
+        if([iTable+1] == fileName) then
+	    	[returnAddress] = 0;
+	    	goto KERN_IRET;
+        endif;
+        i = i + 1;
+    endwhile;
+
+    // get freee entry
+    alias inodeEntry R7;
+    i = 0;
+    inodeEntry = -1;
+    while(i < MAX_FILE_NUM) do 
+        iTable = INODE_TABLE + i*16;
+        if([iTable+1] == -1) then
+            inodeEntry = i;
+            break;
+        endif;
+        i = i + 1;
+    endwhile;
+
+    // no free entry
+    if(inodeEntry == -1) then
+        [returnAddress] = -1;
+        goto KERN_IRET;
+    endif;
+    alias permission R8;
+    permission = [[PTBR + 2*((userSP-3)/512)] * 512 + ((userSP-3)%512)];
+
+    [iTable] = DATA; 				// File Type
+    [iTable+1] = fileName; 			// File Name
+    [iTable+2] = 0; 				// File Size
+    [iTable+3] = [pTable+3];			//userid of current process
+    [iTable+4] = permission;		//permission
+    [iTable+8] = -1;
+    [iTable+9] = -1;
+    [iTable+10] = -1;
+    [iTable+11] = -1;
+    
+
+    // fill root file index for new file
+    alias rootFile R9;
+    rootFile = ROOT_FILE + inodeEntry*8;
+    [rootFile] = fileName; 			// File Name 
+    [rootFile+1] = 0; 				// File Size
+    [rootFile+2] = DATA; 			// File Type  
+    [rootFile+3] = [USER_TABLE + [pTable+3]*2]; // User Name
+    [rootFile+4] = permission; 			// Permission 
+    
+    [returnAddress] = 0;
+    goto KERN_IRET;
+
+endif;
+
+if(sysCallNo == 4) then 								// Delete
+    alias i R5;
+    i = 0;
+    alias iTable R6;
+    alias inodeEntry R7;
+    inodeEntry = -1;
+
+    // find inode table entry
+    while(i < MAX_FILE_NUM) do // 60
+        iTable = INODE_TABLE + i*16;
+        if([iTable+1] == fileName) then
+            inodeEntry = i;
+            break;
+        endif;
+        i = i + 1;
+    endwhile;
+
+
+    // file not found
+    if(inodeEntry == -1) then
+        [returnAddress] = 0;
+        goto KERN_IRET;
+    endif;
+
+
+    // file not data file
+    if([iTable] != DATA ) then
+        [returnAddress] = -1;			//error
+        goto KERN_IRET;
+    endif;
+
+    if([iTable+4] == 0) then			//exclusive permission - no modifying
+        if( [SYSTEM_STATUS_TABLE] != 1 && [iTable+3] != [SYSTEM_STATUS_TABLE]) then		//user not root and current user not owner
+            [returnAddress] = -1;		//error
+            goto KERN_IRET;
+        endif;
+    endif;
+
+    multipush(R1,R2,R3,R4,R5,R6,R7);
+    R1 = ACQUIRE_INODE;				//acquire inode
+    R2 = inodeEntry;
+    R3 = [SYSTEM_STATUS_TABLE + 5*CORE + 1];
+    call RESOURCE_MANAGER;
+    multipop(R1,R2,R3,R4,R5,R6,R7);
+
+    if([FILE_STATUS_TABLE +  inodeEntry*4 +1] != -1) then		//file open count!=-1 
+    
+        multipush(R1,R2,R3,R4,R5,R6,R7);
+        R1 = RELEASE_INODE;			//release inode
+        R2 = inodeEntry;
+        R3 = [SYSTEM_STATUS_TABLE + 5*CORE + 1];
+        call RESOURCE_MANAGER;
+        multipop(R1,R2,R3,R4,R5,R6,R7);
+        
+        [returnAddress] = -2;
+        goto KERN_IRET;
+    endif;
+
+
+    alias dbNo R8;
+    alias bTable R9;
+    alias j R10;
+    i = 8;
+    while(i < 12) do
+        dbNo = [INODE_TABLE + inodeEntry* 16 + i];
+        if(dbNo != -1) then
+        	j = 0;
+		while(j < 4) do					//reset dirty bit if dirty bit set and disk block loaded 
+			if([BUFFER_TABLE + j*4] == dbNo && [BUFFER_TABLE + j*4 + 1] == 1) then
+				[BUFFER_TABLE + j*4 + 1] = 0;
+			endif;
+			j = j + 1;
+		endwhile;
+            multipush(R1,R2,R3,R4,R5,R6,R7,R8,R9);
+            R1 = RELEASE_BLOCK;					//free disk block
+            R2 = dbNo;
+            R3 = [SYSTEM_STATUS_TABLE + 5*CORE + 1];
+            call MEMORY_MANAGER;
+            multipop(R1,R2,R3,R4,R5,R6,R7, R8,R9);
+
+        endif;
+        i = i + 1;
+    endwhile;
+
+
+    // invalidate inode table
+    i = 0;
+    while(i<16) do
+	[iTable+ i] = -1;
+	i = i + 1;
+    endwhile;
+
+    // invalidate user area page
+    [ROOT_FILE + inodeEntry*8] = -1;
+
+
+    multipush(R1,R2,R3,R4,R5,R6,R7);
+    R1 = RELEASE_INODE;						//release lock
+    R2 = inodeEntry;
+    R3 = [SYSTEM_STATUS_TABLE + 5*CORE + 1];
+    call RESOURCE_MANAGER;
+    multipop(R1,R2,R3,R4,R5,R6,R7);
+    
+	[returnAddress] = 0;
+    goto KERN_IRET;
+
+endif;
+
+KERN_IRET :
+	multipush(R1,R2,R3,R4,R5,R6,R7,R8,R9,R10);
+	R1 = RELEASE_LOCK;
+	R2 = KERN_LOCK;
+	call ACCESS_CONTROL;
+	multipop(R1,R2,R3,R4,R5,R6,R7,R8,R9,R10);
+
+[pTable + 9] = 0;
+SP = [pTable + 13];
+ireturn;
